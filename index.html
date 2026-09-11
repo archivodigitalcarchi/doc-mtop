@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gestión Documental MTOP</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1F4E5F">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Inventario de Transferencia — MTOP</h1>
+  <div class="status-row">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusLabel">En línea</span>
+    <span class="pending-badge" id="pendingBadge"></span>
+  </div>
+</div>
+
+<main>
+  <form id="form">
+
+    <div class="card">
+      <h2>Identificación del expediente</h2>
+
+      <label for="serie">Serie *</label>
+      <select id="serie" name="serie" required>
+        <option value="">Selecciona una serie</option>
+      </select>
+
+      <label for="subserie">Subserie</label>
+      <textarea id="subserie" name="subserie" placeholder="Descripción breve de la subserie"></textarea>
+
+      <div class="row2">
+        <div>
+          <label for="caja">N° Caja *</label>
+          <input type="text" id="caja" name="caja" required>
+        </div>
+        <div>
+          <label for="expediente">N° Expediente</label>
+          <input type="text" id="expediente" name="expediente">
+        </div>
+      </div>
+
+      <label for="descripcion">Descripción de serie documental</label>
+      <textarea id="descripcion" name="descripcion"></textarea>
+
+      <label for="numeroDocumento">Número de documento</label>
+      <input type="text" id="numeroDocumento" name="numeroDocumento">
+    </div>
+
+    <div class="card">
+      <h2>Fechas extremas</h2>
+      <div class="row2">
+        <div>
+          <label for="fechaApertura">Apertura</label>
+          <input type="date" id="fechaApertura" name="fechaApertura">
+        </div>
+        <div>
+          <label for="fechaCierre">Cierre</label>
+          <input type="date" id="fechaCierre" name="fechaCierre">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Cantidades y destino</h2>
+      <div class="row2">
+        <div>
+          <label for="fojas">N° Fojas</label>
+          <input type="number" id="fojas" name="fojas" min="0">
+        </div>
+        <div>
+          <label for="tomos">N° Tomos/Cuerpos</label>
+          <input type="number" id="tomos" name="tomos" min="0">
+        </div>
+      </div>
+
+      <label for="destinoFinal">Destino final</label>
+      <input type="text" id="destinoFinal" name="destinoFinal">
+
+      <div class="checks">
+        <div class="check-item">
+          <input type="checkbox" id="original" name="original">
+          <label for="original">Original</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="copia" name="copia">
+          <label for="copia">Copia</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="cd" name="cd">
+          <label for="cd">CD</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Ubicación física</h2>
+      <label for="bloque">Bloque</label>
+      <select id="bloque" name="bloque"><option value="">Selecciona</option></select>
+
+      <label for="estanteria">Estantería</label>
+      <select id="estanteria" name="estanteria"><option value="">Selecciona</option></select>
+
+      <label for="cajaUbicacion">Caja (ubicación física)</label>
+      <select id="cajaUbicacion" name="cajaUbicacion"><option value="">Selecciona</option></select>
+    </div>
+
+  </form>
+</main>
+
+<div class="footer-bar">
+  <button type="submit" form="form" class="btn">Guardar expediente y continuar con el siguiente</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
