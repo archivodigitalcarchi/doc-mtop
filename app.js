@@ -76,11 +76,15 @@ function updatePendingBadge() {
 function onSubmit(e) {
   e.preventDefault();
   const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
 
   if (!form.serie.value || !form.caja.value) {
     showToast('Serie y N° Caja son obligatorios', 'error');
     return;
   }
+
+  // Deshabilitar botón temporalmente para evitar doble clic accidental
+  if (submitBtn) submitBtn.disabled = true;
 
   const record = {
     token: TOKEN,
@@ -110,42 +114,54 @@ function onSubmit(e) {
 
   form.reset();
   showToast('Expediente guardado. Puedes seguir con el siguiente.', 'success');
+  
+  // Reactivar botón para el siguiente expediente
+  if (submitBtn) submitBtn.disabled = false;
+
   trySync();
 }
 
 let syncing = false;
 async function trySync() {
   if (syncing || !navigator.onLine) return;
-  if (!API_URL || API_URL.indexOf('PEGA_AQUI') === 0) return; // aún no configurado
+  if (!API_URL || API_URL.indexOf('PEGA_AQUI') === 0) return;
 
   const q = getQueue();
   if (q.length === 0) return;
 
   syncing = true;
-  const remaining = [...q];
 
-  for (const record of q) {
+  // Procesamos un registro a la vez y actualizamos la cola inmediatamente
+  while (getQueue().length > 0 && navigator.onLine) {
+    const currentQueue = getQueue();
+    const record = currentQueue[0]; // Tomamos el primer registro de la cola
+
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita preflight CORS
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(record)
       });
       const data = await res.json();
+      
       if (data.ok) {
-        const idx = remaining.findIndex((r) => r._localId === record._localId);
-        if (idx > -1) remaining.splice(idx, 1);
+        // ELIMINACIÓN INMEDIATA DEL REGISTRO EXITOSO:
+        // Se vuelve a leer la cola por si cambió y se elimina el elemento enviado
+        const updatedQueue = getQueue().filter(r => r._localId !== record._localId);
+        setQueue(updatedQueue);
+      } else {
+        // Si el servidor respondió pero con error, detenemos el ciclo
+        break;
       }
     } catch (err) {
-      // sin conexión real o falla de red: se detiene y reintenta luego
+      // Falla de red: detenemos la sincronización para reintentar después
       break;
     }
   }
 
-  setQueue(remaining);
   syncing = false;
 
-  if (remaining.length === 0 && q.length > 0) {
+  if (getQueue().length === 0 && q.length > 0) {
     showToast('Todos los expedientes pendientes se sincronizaron', 'success');
   }
 }
