@@ -1,8 +1,8 @@
 // ============================================================
-// CONFIGURA ESTO cuando despliegues tu Apps Script como Web App
+// CONFIGURACIÓN DE CONEXIÓN Y COLA OFFLINE
 // ============================================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbyY9TNIcH7qu8IsuKr5zg-Y7SfUVd5e8LfqrQFzXrX-e5ueJE-4YoJgUG0cIYKmF-2H/exec';
-const TOKEN = 'mtop2026'; // debe ser igual al TOKEN en Code.gs
+const TOKEN = 'mtop2026';
 
 const QUEUE_KEY = 'doc_mtop_queue';
 
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('online', () => { updateStatus(); trySync(); });
 window.addEventListener('offline', updateStatus);
-setInterval(trySync, 20000); // reintenta cada 20s por si acaso
+setInterval(trySync, 20000); // Reintento automático cada 20s
 
 function updateStatus() {
   const dot = document.getElementById('statusDot');
@@ -81,30 +81,29 @@ function onSubmit(e) {
   const form = e.target;
   const submitBtn = form.querySelector('button[type="submit"]');
 
-  // Validar campos requeridos (incluye digitador)
+  // Validar campos requeridos
   const digitadorVal = form.digitador ? form.digitador.value.trim() : '';
   if (!digitadorVal || !form.serie.value || !form.caja.value) {
     showToast('Digitador, Serie y N° Caja son obligatorios', 'error');
     return;
   }
 
-  // Deshabilitar botón temporalmente para evitar doble clic accidental
   if (submitBtn) submitBtn.disabled = true;
 
-  // Construcción del objeto garantizando todo texto en MAYÚSCULAS
+  // Objeto de datos: conserva cualquier carácter (/, -, ., etc.) y convierte a Mayúsculas
   const record = {
     token: TOKEN,
     digitador: digitadorVal.toUpperCase(),
     serie: (form.serie.value || '').toUpperCase(),
     subserie: (form.subserie.value || '').toUpperCase().trim(),
-    caja: form.caja.value,
+    caja: (form.caja.value || '').toUpperCase().trim(),
     expediente: (form.expediente.value || '').toUpperCase().trim(),
     descripcion: (form.descripcion.value || '').toUpperCase().trim(),
     numeroDocumento: (form.numeroDocumento.value || '').toUpperCase().trim(),
     fechaApertura: form.fechaApertura.value,
     fechaCierre: form.fechaCierre.value,
-    fojas: form.fojas.value,
-    tomos: form.tomos.value,
+    fojas: (form.fojas.value || '').toUpperCase().trim(),
+    tomos: (form.tomos.value || '').toUpperCase().trim(),
     destinoFinal: (form.destinoFinal.value || '').toUpperCase().trim(),
     original: form.original.checked,
     copia: form.copia.checked,
@@ -119,10 +118,13 @@ function onSubmit(e) {
   q.push(record);
   setQueue(q);
 
+  // Mantiene el valor del digitador activo para la siguiente carga
+  const currentDigitador = form.digitador ? form.digitador.value : '';
   form.reset();
+  if (form.digitador) form.digitador.value = currentDigitador;
+
   showToast('Expediente guardado. Puedes seguir con el siguiente.', 'success');
-  
-  // Reactivar botón para el siguiente expediente
+
   if (submitBtn) submitBtn.disabled = false;
 
   trySync();
@@ -138,10 +140,9 @@ async function trySync() {
 
   syncing = true;
 
-  // Procesamos un registro a la vez y actualizamos la cola inmediatamente
   while (getQueue().length > 0 && navigator.onLine) {
     const currentQueue = getQueue();
-    const record = currentQueue[0]; // Tomamos el primer registro de la cola
+    const record = currentQueue[0];
 
     try {
       const res = await fetch(API_URL, {
@@ -150,17 +151,14 @@ async function trySync() {
         body: JSON.stringify(record)
       });
       const data = await res.json();
-      
+
       if (data.ok) {
-        // ELIMINACIÓN INMEDIATA DEL REGISTRO EXITOSO:
         const updatedQueue = getQueue().filter(r => r._localId !== record._localId);
         setQueue(updatedQueue);
       } else {
-        // Si el servidor respondió pero con error, detenemos el ciclo
         break;
       }
     } catch (err) {
-      // Falla de red: detenemos la sincronización para reintentar después
       break;
     }
   }
