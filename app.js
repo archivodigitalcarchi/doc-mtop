@@ -2,7 +2,7 @@
  * FRONTEND APP — Sistema de Gestión Documental MTOP
  */
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_REEMPLAZA_CON_TU_ID_AQUÍ/exec'; // Asegúrate de colocar tu URL de Apps Script aquí
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_REEMPLAZA_CON_TU_ID_AQUÍ/exec'; // Pon aquí tu URL de Apps Script
 const TOKEN = 'mtop2026';
 
 const statusDot = document.getElementById('statusDot');
@@ -12,7 +12,6 @@ const pendingText = document.getElementById('pendingText');
 const btnSync = document.getElementById('btnSync');
 const form = document.getElementById('docForm');
 
-// Verificar estado de conexión
 function updateOnlineStatus() {
   if (navigator.onLine) {
     statusDot.classList.remove('offline');
@@ -20,7 +19,7 @@ function updateOnlineStatus() {
     syncPendingData();
   } else {
     statusDot.classList.add('offline');
-    statusText.textContent = 'Modo sin conexión (datos se guardarán localmente)';
+    statusText.textContent = 'Modo sin conexión (guardando localmente)';
   }
 }
 
@@ -28,7 +27,6 @@ window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 updateOnlineStatus();
 
-// Manejo de almacenamiento offline
 function getPendingData() {
   const records = localStorage.getItem('mtop_pending_records');
   return records ? JSON.parse(records) : [];
@@ -53,7 +51,6 @@ function checkPendingRecords() {
 
 checkPendingRecords();
 
-// Función para enviar datos al backend
 async function sendData(data) {
   const payload = { ...data, token: TOKEN };
   const response = await fetch(SCRIPT_URL, {
@@ -65,7 +62,6 @@ async function sendData(data) {
   return response;
 }
 
-// Sincronización automática de registros offline
 async function syncPendingData() {
   if (!navigator.onLine) return;
   const records = getPendingData();
@@ -91,22 +87,29 @@ async function syncPendingData() {
 
 btnSync.addEventListener('click', syncPendingData);
 
-// Evento al enviar el formulario
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
+  // Captura de todos los datos permitiendo cualquier tipo de carácter
   const formData = {
-    responsable: document.getElementById('responsable').value,
-    serie: document.getElementById('serie').value,
-    subserie: document.getElementById('subserie').value,
-    caja: document.getElementById('caja').value,
-    expediente: document.getElementById('expediente').value,
-    descripcion: document.getElementById('descripcion').value,
-    numeroDocumento: document.getElementById('numeroDocumento').value,
-    fechaApertura: document.getElementById('fechaApertura').value,
-    fechaCierre: document.getElementById('fechaCierre').value,
-    fojas: document.getElementById('fojas').value,
-    tomos: document.getElementById('tomos').value
+    responsable: document.getElementById('responsable').value.trim(),
+    serie: document.getElementById('serie').value.trim(),
+    subserie: document.getElementById('subserie').value.trim(),
+    caja: document.getElementById('caja').value.trim(),
+    expediente: document.getElementById('expediente').value.trim(),
+    descripcion: document.getElementById('descripcion').value.trim(),
+    numeroDocumento: document.getElementById('numeroDocumento').value.trim(),
+    fechaApertura: document.getElementById('fechaApertura').value.trim(),
+    fechaCierre: document.getElementById('fechaCierre').value.trim(),
+    fojas: document.getElementById('fojas').value.trim(),
+    tomos: document.getElementById('tomos').value.trim(),
+    destinoFinal: document.getElementById('destinoFinal').value.trim(),
+    original: document.getElementById('original').checked,
+    copia: document.getElementById('copia').checked,
+    cd: document.getElementById('cd').checked,
+    bloque: document.getElementById('bloque').value.trim(),
+    estanteria: document.getElementById('estanteria').value.trim(),
+    cajaUbicacion: document.getElementById('cajaUbicacion').value.trim()
   };
 
   if (navigator.onLine) {
@@ -116,17 +119,16 @@ form.addEventListener('submit', async (e) => {
       form.reset();
     } catch (err) {
       savePendingData(formData);
-      alert('No se pudo conectar con el servidor. Se guardó localmente para enviar después.');
+      alert('Guardado localmente por problemas de red.');
       form.reset();
     }
   } else {
     savePendingData(formData);
-    alert('Guardado localmente en modo sin conexión.');
+    alert('Guardado en modo sin conexión.');
     form.reset();
   }
 });
 
-// Registro del Service Worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(err => console.error('Error al registrar SW:', err));
+  navigator.serviceWorker.register('sw.js').catch(err => console.error('Error SW:', err));
 }
