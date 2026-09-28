@@ -24,7 +24,7 @@
 <main>
   <form id="form">
 
-    <!-- CAMPO DIGITADOR AGREGADO -->
+    <!-- RESPONSABLE DEL REGISTRO -->
     <div class="card">
       <h2>Responsable del registro</h2>
       <label for="digitador">Digitador *</label>
@@ -34,10 +34,12 @@
         name="digitador" 
         required 
         placeholder="NOMBRE O INICIALES DEL DIGITADOR"
+        autocomplete="off"
         oninput="this.value = this.value.toUpperCase()"
       >
     </div>
 
+    <!-- IDENTIFICACIÓN DEL EXPEDIENTE -->
     <div class="card">
       <h2>Identificación del expediente</h2>
 
@@ -52,11 +54,11 @@
       <div class="row2">
         <div>
           <label for="caja">N° Caja *</label>
-          <input type="text" id="caja" name="caja" required oninput="this.value = this.value.toUpperCase()">
+          <input type="text" id="caja" name="caja" required autocomplete="off" oninput="this.value = this.value.toUpperCase()">
         </div>
         <div>
           <label for="expediente">N° Expediente</label>
-          <input type="text" id="expediente" name="expediente" oninput="this.value = this.value.toUpperCase()">
+          <input type="text" id="expediente" name="expediente" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
         </div>
       </div>
 
@@ -64,9 +66,10 @@
       <textarea id="descripcion" name="descripcion" oninput="this.value = this.value.toUpperCase()"></textarea>
 
       <label for="numeroDocumento">Número de documento</label>
-      <input type="text" id="numeroDocumento" name="numeroDocumento" oninput="this.value = this.value.toUpperCase()">
+      <input type="text" id="numeroDocumento" name="numeroDocumento" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
     </div>
 
+    <!-- FECHAS EXTREMAS -->
     <div class="card">
       <h2>Fechas extremas</h2>
       <div class="row2">
@@ -81,21 +84,22 @@
       </div>
     </div>
 
+    <!-- CANTIDADES Y DESTINO -->
     <div class="card">
       <h2>Cantidades y destino</h2>
       <div class="row2">
         <div>
           <label for="fojas">N° Fojas</label>
-          <input type="text" id="fojas" name="fojas" oninput="this.value = this.value.toUpperCase()">
+          <input type="text" id="fojas" name="fojas" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
         </div>
         <div>
           <label for="tomos">N° Tomos/Cuerpos</label>
-          <input type="text" id="tomos" name="tomos" oninput="this.value = this.value.toUpperCase()">
+          <input type="text" id="tomos" name="tomos" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
         </div>
       </div>
 
       <label for="destinoFinal">Destino final</label>
-      <input type="text" id="destinoFinal" name="destinoFinal" oninput="this.value = this.value.toUpperCase()">
+      <input type="text" id="destinoFinal" name="destinoFinal" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
 
       <div class="checks">
         <div class="check-item">
@@ -113,6 +117,7 @@
       </div>
     </div>
 
+    <!-- UBICACIÓN FÍSICA -->
     <div class="card">
       <h2>Ubicación física</h2>
       <label for="bloque">Bloque</label>
