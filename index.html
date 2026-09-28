@@ -24,6 +24,20 @@
 <main>
   <form id="form">
 
+    <!-- CAMPO DIGITADOR AGREGADO -->
+    <div class="card">
+      <h2>Responsable del registro</h2>
+      <label for="digitador">Digitador *</label>
+      <input 
+        type="text" 
+        id="digitador" 
+        name="digitador" 
+        required 
+        placeholder="NOMBRE O INICIALES DEL DIGITADOR"
+        oninput="this.value = this.value.toUpperCase()"
+      >
+    </div>
+
     <div class="card">
       <h2>Identificación del expediente</h2>
 
@@ -33,24 +47,24 @@
       </select>
 
       <label for="subserie">Subserie</label>
-      <textarea id="subserie" name="subserie" placeholder="Descripción breve de la subserie"></textarea>
+      <textarea id="subserie" name="subserie" placeholder="Descripción breve de la subserie" oninput="this.value = this.value.toUpperCase()"></textarea>
 
       <div class="row2">
         <div>
           <label for="caja">N° Caja *</label>
-          <input type="text" id="caja" name="caja" required>
+          <input type="text" id="caja" name="caja" required oninput="this.value = this.value.toUpperCase()">
         </div>
         <div>
           <label for="expediente">N° Expediente</label>
-          <input type="text" id="expediente" name="expediente">
+          <input type="text" id="expediente" name="expediente" oninput="this.value = this.value.toUpperCase()">
         </div>
       </div>
 
       <label for="descripcion">Descripción de serie documental</label>
-      <textarea id="descripcion" name="descripcion"></textarea>
+      <textarea id="descripcion" name="descripcion" oninput="this.value = this.value.toUpperCase()"></textarea>
 
       <label for="numeroDocumento">Número de documento</label>
-      <input type="text" id="numeroDocumento" name="numeroDocumento">
+      <input type="text" id="numeroDocumento" name="numeroDocumento" oninput="this.value = this.value.toUpperCase()">
     </div>
 
     <div class="card">
@@ -81,7 +95,7 @@
       </div>
 
       <label for="destinoFinal">Destino final</label>
-      <input type="text" id="destinoFinal" name="destinoFinal">
+      <input type="text" id="destinoFinal" name="destinoFinal" oninput="this.value = this.value.toUpperCase()">
 
       <div class="checks">
         <div class="check-item">
