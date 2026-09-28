@@ -2,7 +2,7 @@
  * FRONTEND APP — Sistema de Gestión Documental MTOP
  */
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_REEMPLAZA_CON_TU_ID_AQUÍ/exec'; // Pon aquí tu URL desplegada de Google Apps Script
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_REEMPLAZA_CON_TU_ID_AQUÍ/exec'; // Asegúrate de colocar tu URL de Apps Script aquí
 const TOKEN = 'mtop2026';
 
 const statusDot = document.getElementById('statusDot');
@@ -28,7 +28,7 @@ window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 updateOnlineStatus();
 
-// Manejo de IndexedDB / localStorage para envíos offline
+// Manejo de almacenamiento offline
 function getPendingData() {
   const records = localStorage.getItem('mtop_pending_records');
   return records ? JSON.parse(records) : [];
@@ -53,7 +53,7 @@ function checkPendingRecords() {
 
 checkPendingRecords();
 
-// Función para enviar datos
+// Función para enviar datos al backend
 async function sendData(data) {
   const payload = { ...data, token: TOKEN };
   const response = await fetch(SCRIPT_URL, {
@@ -65,7 +65,7 @@ async function sendData(data) {
   return response;
 }
 
-// Sincronizar pendientes cuando se recupera internet
+// Sincronización automática de registros offline
 async function syncPendingData() {
   if (!navigator.onLine) return;
   const records = getPendingData();
@@ -91,11 +91,12 @@ async function syncPendingData() {
 
 btnSync.addEventListener('click', syncPendingData);
 
-// Enviar Formulario
+// Evento al enviar el formulario
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const formData = {
+    responsable: document.getElementById('responsable').value,
     serie: document.getElementById('serie').value,
     subserie: document.getElementById('subserie').value,
     caja: document.getElementById('caja').value,
@@ -125,7 +126,7 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-// Service Worker Registration
+// Registro del Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(err => console.error('Error al registrar SW:', err));
 }
