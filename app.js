@@ -1,4 +1,4 @@
-// URL de Web App de Google Apps Script
+// URL de Web App de Google Apps Script (Reemplazar con la URL publicada)
 const SCRIPT_URL = 'https://script.google.com/macros/s/TU_SCRIPT_ID_AQUI/exec';
 
 // Registro del Service Worker
