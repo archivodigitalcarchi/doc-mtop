@@ -1,6 +1,8 @@
 // URL directa de tu ejecutable de Google Apps Script
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY9TNlcH7qu8IsuKr5zg-Y7SfUVd5e8LfqrQFzXrX-e5ueJE-4YoJgUG0cIYKmF-2H/exec";
 
+let enviando = false;
+
 document.addEventListener('DOMContentLoaded', () => {
   const docForm = document.getElementById('docForm');
   const statusDot = document.getElementById('statusDot');
@@ -8,19 +10,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const pendingBanner = document.getElementById('pendingBanner');
   const btnSync = document.getElementById('btnSync');
 
-  // Registrar Service Worker
+  // 1. REGISTRO DEL SERVICE WORKER
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then(reg => console.log('Service Worker activo:', reg))
-      .catch(err => console.error('Error al registrar Service Worker:', err));
+      .catch(err => console.error('Error Service Worker:', err));
   }
 
-  // Monitor de Estado de Red
+  // 2. DETECTOR DE RED EN TIEMPO REAL (ONLINE / OFFLINE)
   function actualizarEstadoRed() {
     if (navigator.onLine) {
       if (statusDot) statusDot.classList.remove('offline');
       if (statusText) statusText.textContent = 'En línea';
-      sincronizarPendientes();
+      procesarCola(); // Intenta sincronizar automáticamente al volver la red
     } else {
       if (statusDot) statusDot.classList.add('offline');
       if (statusText) statusText.textContent = 'Fuera de línea';
@@ -31,16 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('offline', actualizarEstadoRed);
   actualizarEstadoRed();
 
-  // Envío del Formulario
-  docForm.addEventListener('submit', async (e) => {
+  // 3. CAPTURA DEL FORMULARIO Y GUARDADO INMEDIATO
+  docForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    // Mantener valores persistentes tras guardar
+    // Mantener Responsable, Serie y Caja para agilizar el llenado continuo
     const responsableVal = document.getElementById('responsable').value;
     const serieVal = document.getElementById('serie').value;
     const cajaVal = document.getElementById('caja').value;
 
-    const data = {
+    const registro = {
       responsable: responsableVal,
       serie: serieVal,
       subserie: document.getElementById('subserie').value,
@@ -61,14 +63,16 @@ document.addEventListener('DOMContentLoaded', () => {
       cajaUbicacion: document.getElementById('cajaUbicacion').value
     };
 
-    if (navigator.onLine) {
-      await enviarAServer(data);
-    } else {
-      guardarLocalmente(data);
-      alert('Sin conexión. Registro guardado localmente.');
-    }
+    // Almacenamiento seguro e inmediato en LocalStorage
+    let cola = JSON.parse(localStorage.getItem('cola_mtop') || '[]');
+    cola.push(registro);
+    localStorage.setItem('cola_mtop', JSON.stringify(cola));
 
-    // Resetear manteniendo campos fijos
+    // Refrescar estado visual de la cola y disparar envío asíncrono
+    actualizarBanner();
+    procesarCola();
+
+    // Resetear formulario manteniendo campos persistentes
     docForm.reset();
     document.getElementById('responsable').value = responsableVal;
     document.getElementById('serie').value = serieVal;
@@ -76,53 +80,60 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('expediente').focus();
   });
 
-  // Envío a Google Sheets
-  async function enviarAServer(data) {
-    try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
-        body: JSON.stringify(data)
-      });
+  // 4. MOTOR DE SINCRONIZACIÓN EN SEGUNDO PLANO
+  async function procesarCola() {
+    if (enviando || !navigator.onLine) return;
 
-      alert('¡Expediente guardado correctamente en la hoja de cálculo!');
-    } catch (err) {
-      console.error('Error de red al enviar:', err);
-      guardarLocalmente(data);
-      alert('No se pudo conectar con el servidor. Registro guardado localmente.');
-    }
-  }
-
-  function guardarLocalmente(data) {
-    let cola = JSON.parse(localStorage.getItem('cola_mtop') || '[]');
-    cola.push(data);
-    localStorage.setItem('cola_mtop', JSON.stringify(cola));
-    comprobarPendientes();
-  }
-
-  function comprobarPendientes() {
-    let cola = JSON.parse(localStorage.getItem('cola_mtop') || '[]');
-    if (pendingBanner) {
-      pendingBanner.style.display = cola.length > 0 ? 'flex' : 'none';
-    }
-  }
-
-  async function sincronizarPendientes() {
     let cola = JSON.parse(localStorage.getItem('cola_mtop') || '[]');
     if (cola.length === 0) return;
 
-    for (const item of cola) {
-      await enviarAServer(item);
+    enviando = true;
+
+    while (cola.length > 0 && navigator.onLine) {
+      const item = cola[0];
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(item)
+        });
+
+        // Remover de la cola local tras confirmar envío
+        cola.shift();
+        localStorage.setItem('cola_mtop', JSON.stringify(cola));
+        actualizarBanner();
+      } catch (err) {
+        console.error('Error enviando registro a Google Sheets:', err);
+        break; // Detener bucle si falla la conexión temporalmente
+      }
     }
-    localStorage.removeItem('cola_mtop');
-    comprobarPendientes();
+
+    enviando = false;
+  }
+
+  // 5. BANNER VISUAL DE REGISTROS PENDIENTES
+  function actualizarBanner() {
+    let cola = JSON.parse(localStorage.getItem('cola_mtop') || '[]');
+    if (pendingBanner) {
+      if (cola.length > 0) {
+        pendingBanner.style.display = 'flex';
+        const pendingText = document.getElementById('pendingText');
+        if (pendingText) {
+          pendingText.textContent = `Sincronizando ${cola.length} registro(s) pendiente(s)...`;
+        }
+      } else {
+        pendingBanner.style.display = 'none';
+      }
+    }
   }
 
   if (btnSync) {
-    btnSync.addEventListener('click', sincronizarPendientes);
+    btnSync.addEventListener('click', procesarCola);
   }
 
-  comprobarPendientes();
+  actualizarBanner();
+  procesarCola();
 });
