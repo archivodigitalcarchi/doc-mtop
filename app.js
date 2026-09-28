@@ -81,8 +81,9 @@ function onSubmit(e) {
   const form = e.target;
   const submitBtn = form.querySelector('button[type="submit"]');
 
-  // Lectura segura del valor del digitador
-  const digitadorVal = form.digitador ? form.digitador.value.trim() : '';
+  // CAPTURA DIRECTA FORZADA POR ID
+  const digitadorInput = document.getElementById('digitador');
+  const digitadorVal = digitadorInput ? digitadorInput.value.trim() : '';
 
   if (!digitadorVal || !form.serie.value || !form.caja.value) {
     showToast('Digitador, Serie y N° Caja son obligatorios', 'error');
@@ -91,7 +92,7 @@ function onSubmit(e) {
 
   if (submitBtn) submitBtn.disabled = true;
 
-  // Construcción del objeto 'record' mapeando la propiedad 'digitador'
+  // CONSTRUCCIÓN DEL REGISTRO PARA APPS SCRIPT
   const record = {
     token: TOKEN,
     digitador: digitadorVal.toUpperCase(),
@@ -119,10 +120,9 @@ function onSubmit(e) {
   q.push(record);
   setQueue(q);
 
-  // Mantiene el valor escrito en Digitador tras el reset del formulario
-  const currentDigitador = form.digitador ? form.digitador.value : '';
+  // Mantiene el valor del digitador activo para no escribirlo en cada registro
   form.reset();
-  if (form.digitador) form.digitador.value = currentDigitador;
+  if (digitadorInput) digitadorInput.value = digitadorVal;
 
   showToast('Expediente guardado. Puedes seguir con el siguiente.', 'success');
 
