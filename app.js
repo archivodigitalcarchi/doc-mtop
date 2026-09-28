@@ -1,182 +1,131 @@
-// ============================================================
-// CONFIGURACIÓN DE CONEXIÓN Y COLA OFFLINE
-// ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbyY9TNIcH7qu8IsuKr5zg-Y7SfUVd5e8LfqrQFzXrX-e5ueJE-4YoJgUG0cIYKmF-2H/exec';
+/**
+ * FRONTEND APP — Sistema de Gestión Documental MTOP
+ */
+
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_REEMPLAZA_CON_TU_ID_AQUÍ/exec'; // Pon aquí tu URL desplegada de Google Apps Script
 const TOKEN = 'mtop2026';
 
-const QUEUE_KEY = 'doc_mtop_queue';
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const pendingBanner = document.getElementById('pendingBanner');
+const pendingText = document.getElementById('pendingText');
+const btnSync = document.getElementById('btnSync');
+const form = document.getElementById('docForm');
 
-// ---- Listas de opciones ----
-const SERIES = [
-  'TH - TALENTO HUMANO', 'SG - SECRETARÍA GENERAL', 'TIC - TECNOLOGÍAS DE LA INFORMACIÓN',
-  'FIN - FINANCIERO', 'JUR - JURÍDICO', 'PU - PROYECTOS URBANOS', 'PR - PROYECTOS RURALES',
-  'DP - DIRECCIÓN PROVINCIAL', 'TS - TÉCNICO SOCIAL', 'T - TÉCNICO', 'C - CONTABILIDAD'
-];
-
-function fillSelect(id, values) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  values.forEach((v) => {
-    const opt = document.createElement('option');
-    opt.value = v;
-    opt.textContent = v;
-    el.appendChild(opt);
-  });
-}
-
-function range(prefix, n) {
-  return Array.from({ length: n }, (_, i) => `${prefix}${i + 1}`);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  fillSelect('serie', SERIES);
-  fillSelect('bloque', range('B', 20));
-  fillSelect('estanteria', range('EST', 20));
-  fillSelect('cajaUbicacion', range('C', 20));
-
-  updateStatus();
-  updatePendingBadge();
-  trySync();
-
-  document.getElementById('form').addEventListener('submit', onSubmit);
-});
-
-window.addEventListener('online', () => { updateStatus(); trySync(); });
-window.addEventListener('offline', updateStatus);
-setInterval(trySync, 20000);
-
-function updateStatus() {
-  const dot = document.getElementById('statusDot');
-  const label = document.getElementById('statusLabel');
+// Verificar estado de conexión
+function updateOnlineStatus() {
   if (navigator.onLine) {
-    if (dot) dot.classList.remove('offline');
-    if (label) label.textContent = 'En línea';
+    statusDot.classList.remove('offline');
+    statusText.textContent = 'En línea';
+    syncPendingData();
   } else {
-    if (dot) dot.classList.add('offline');
-    if (label) label.textContent = 'Sin conexión — se guarda en este dispositivo';
+    statusDot.classList.add('offline');
+    statusText.textContent = 'Modo sin conexión (datos se guardarán localmente)';
   }
 }
 
-function getQueue() {
-  try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; }
-  catch { return []; }
-}
-function setQueue(q) { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); updatePendingBadge(); }
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
 
-function updatePendingBadge() {
-  const q = getQueue();
-  const badge = document.getElementById('pendingBadge');
-  if (badge) {
-    if (q.length > 0) {
-      badge.textContent = `${q.length} pendiente${q.length > 1 ? 's' : ''} de enviar`;
-      badge.classList.add('show');
-    } else {
-      badge.classList.remove('show');
+// Manejo de IndexedDB / localStorage para envíos offline
+function getPendingData() {
+  const records = localStorage.getItem('mtop_pending_records');
+  return records ? JSON.parse(records) : [];
+}
+
+function savePendingData(data) {
+  const records = getPendingData();
+  records.push(data);
+  localStorage.setItem('mtop_pending_records', JSON.stringify(records));
+  checkPendingRecords();
+}
+
+function checkPendingRecords() {
+  const records = getPendingData();
+  if (records.length > 0) {
+    pendingBanner.style.display = 'flex';
+    pendingText.textContent = `Hay ${records.length} registro(s) pendiente(s) de envío.`;
+  } else {
+    pendingBanner.style.display = 'none';
+  }
+}
+
+checkPendingRecords();
+
+// Función para enviar datos
+async function sendData(data) {
+  const payload = { ...data, token: TOKEN };
+  const response = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return response;
+}
+
+// Sincronizar pendientes cuando se recupera internet
+async function syncPendingData() {
+  if (!navigator.onLine) return;
+  const records = getPendingData();
+  if (records.length === 0) return;
+
+  btnSync.disabled = true;
+  btnSync.textContent = 'Enviando...';
+
+  const remaining = [];
+  for (let item of records) {
+    try {
+      await sendData(item);
+    } catch (e) {
+      remaining.push(item);
     }
   }
+
+  localStorage.setItem('mtop_pending_records', JSON.stringify(remaining));
+  btnSync.disabled = false;
+  btnSync.textContent = 'Sincronizar';
+  checkPendingRecords();
 }
 
-function onSubmit(e) {
+btnSync.addEventListener('click', syncPendingData);
+
+// Enviar Formulario
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]');
 
-  // CAPTURA DIRECTA FORZADA POR ID
-  const digitadorInput = document.getElementById('digitador');
-  const digitadorVal = digitadorInput ? digitadorInput.value.trim() : '';
-
-  if (!digitadorVal || !form.serie.value || !form.caja.value) {
-    showToast('Digitador, Serie y N° Caja son obligatorios', 'error');
-    return;
-  }
-
-  if (submitBtn) submitBtn.disabled = true;
-
-  // CONSTRUCCIÓN DEL REGISTRO PARA APPS SCRIPT
-  const record = {
-    token: TOKEN,
-    digitador: digitadorVal.toUpperCase(),
-    serie: (form.serie.value || '').toUpperCase(),
-    subserie: (form.subserie.value || '').toUpperCase().trim(),
-    caja: (form.caja.value || '').toUpperCase().trim(),
-    expediente: (form.expediente.value || '').toUpperCase().trim(),
-    descripcion: (form.descripcion.value || '').toUpperCase().trim(),
-    numeroDocumento: (form.numeroDocumento.value || '').toUpperCase().trim(),
-    fechaApertura: form.fechaApertura.value,
-    fechaCierre: form.fechaCierre.value,
-    fojas: (form.fojas.value || '').toUpperCase().trim(),
-    tomos: (form.tomos.value || '').toUpperCase().trim(),
-    destinoFinal: (form.destinoFinal.value || '').toUpperCase().trim(),
-    original: form.original.checked,
-    copia: form.copia.checked,
-    cd: form.cd.checked,
-    bloque: form.bloque.value,
-    estanteria: form.estanteria.value,
-    cajaUbicacion: form.cajaUbicacion.value,
-    _localId: Date.now() + '-' + Math.random().toString(36).slice(2)
+  const formData = {
+    serie: document.getElementById('serie').value,
+    subserie: document.getElementById('subserie').value,
+    caja: document.getElementById('caja').value,
+    expediente: document.getElementById('expediente').value,
+    descripcion: document.getElementById('descripcion').value,
+    numeroDocumento: document.getElementById('numeroDocumento').value,
+    fechaApertura: document.getElementById('fechaApertura').value,
+    fechaCierre: document.getElementById('fechaCierre').value,
+    fojas: document.getElementById('fojas').value,
+    tomos: document.getElementById('tomos').value
   };
 
-  const q = getQueue();
-  q.push(record);
-  setQueue(q);
-
-  // Mantiene el valor del digitador activo para no escribirlo en cada registro
-  form.reset();
-  if (digitadorInput) digitadorInput.value = digitadorVal;
-
-  showToast('Expediente guardado. Puedes seguir con el siguiente.', 'success');
-
-  if (submitBtn) submitBtn.disabled = false;
-
-  trySync();
-}
-
-let syncing = false;
-async function trySync() {
-  if (syncing || !navigator.onLine) return;
-  if (!API_URL || API_URL.indexOf('PEGA_AQUI') === 0) return;
-
-  const q = getQueue();
-  if (q.length === 0) return;
-
-  syncing = true;
-
-  while (getQueue().length > 0 && navigator.onLine) {
-    const currentQueue = getQueue();
-    const record = currentQueue[0];
-
+  if (navigator.onLine) {
     try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(record)
-      });
-      const data = await res.json();
-
-      if (data.ok) {
-        const updatedQueue = getQueue().filter(r => r._localId !== record._localId);
-        setQueue(updatedQueue);
-      } else {
-        break;
-      }
+      await sendData(formData);
+      alert('Expediente guardado con éxito');
+      form.reset();
     } catch (err) {
-      break;
+      savePendingData(formData);
+      alert('No se pudo conectar con el servidor. Se guardó localmente para enviar después.');
+      form.reset();
     }
+  } else {
+    savePendingData(formData);
+    alert('Guardado localmente en modo sin conexión.');
+    form.reset();
   }
+});
 
-  syncing = false;
-
-  if (getQueue().length === 0 && q.length > 0) {
-    showToast('Todos los expedientes pendientes se sincronizaron', 'success');
-  }
-}
-
-let toastTimer;
-function showToast(msg, type) {
-  const el = document.getElementById('toast');
-  if (!el) return;
-  el.textContent = msg;
-  el.className = 'toast show ' + (type || '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(err => console.error('Error al registrar SW:', err));
 }
