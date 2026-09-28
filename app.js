@@ -1,139 +1,166 @@
-// URL directa de tu ejecutable de Google Apps Script
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY9TNlcH7qu8IsuKr5zg-Y7SfUVd5e8LfqrQFzXrX-e5ueJE-4YoJgUG0cIYKmF-2H/exec";
+// ============================================================
+// CONFIGURA ESTO cuando despliegues tu Apps Script como Web App
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbyY9TNIcH7qu8IsuKr5zg-Y7SfUVd5e8LfqrQFzXrX-e5ueJE-4YoJgUG0cIYKmF-2H/exec';
+const TOKEN = 'mtop2026'; // debe ser igual al TOKEN en Code.gs
 
-let enviando = false;
+const QUEUE_KEY = 'doc_mtop_queue';
+const DIGITADOR_KEY = 'doc_mtop_digitador';
+
+// ---- Listas de opciones ----
+const SERIES = [
+  'TH - Talento Humano', 'SG - Secretaría General', 'TIC - Tecnologías de la Información',
+  'FIN - Financiero', 'JUR - Jurídico', 'PU - Proyectos Urbanos', 'PR - Proyectos Rurales',
+  'DP - Dirección Provincial', 'TS - Técnico Social', 'T - Técnico', 'C - Contabilidad'
+];
+
+function fillSelect(id, values) {
+  const el = document.getElementById(id);
+  values.forEach((v) => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    el.appendChild(opt);
+  });
+}
+
+function range(prefix, n) {
+  return Array.from({ length: n }, (_, i) => `${prefix}${i + 1}`);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-  const docForm = document.getElementById('docForm');
-  const statusDot = document.getElementById('statusDot');
-  const statusText = document.getElementById('statusText');
-  const pendingBanner = document.getElementById('pendingBanner');
-  const btnSync = document.getElementById('btnSync');
+  fillSelect('serie', SERIES);
+  fillSelect('bloque', range('B', 20));
+  fillSelect('estanteria', range('EST', 20));
+  fillSelect('cajaUbicacion', range('C', 20));
 
-  // 1. REGISTRO DEL SERVICE WORKER
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Service Worker activo:', reg))
-      .catch(err => console.error('Error Service Worker:', err));
-  }
+  document.getElementById('digitador').value = localStorage.getItem(DIGITADOR_KEY) || '';
 
-  // 2. DETECTOR DE RED EN TIEMPO REAL (ONLINE / OFFLINE)
-  function actualizarEstadoRed() {
-    if (navigator.onLine) {
-      if (statusDot) statusDot.classList.remove('offline');
-      if (statusText) statusText.textContent = 'En línea';
-      procesarCola(); // Intenta sincronizar automáticamente al volver la red
-    } else {
-      if (statusDot) statusDot.classList.add('offline');
-      if (statusText) statusText.textContent = 'Fuera de línea';
-    }
-  }
+  updateStatus();
+  updatePendingBadge();
+  trySync();
 
-  window.addEventListener('online', actualizarEstadoRed);
-  window.addEventListener('offline', actualizarEstadoRed);
-  actualizarEstadoRed();
-
-  // 3. CAPTURA DEL FORMULARIO Y GUARDADO INMEDIATO
-  docForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    // Mantener Responsable, Serie y Caja para agilizar el llenado continuo
-    const responsableVal = document.getElementById('responsable').value;
-    const serieVal = document.getElementById('serie').value;
-    const cajaVal = document.getElementById('caja').value;
-
-    const registro = {
-      responsable: responsableVal,
-      serie: serieVal,
-      subserie: document.getElementById('subserie').value,
-      caja: cajaVal,
-      expediente: document.getElementById('expediente').value,
-      descripcion: document.getElementById('descripcion').value,
-      numeroDocumento: document.getElementById('numeroDocumento').value,
-      fechaApertura: document.getElementById('fechaApertura').value,
-      fechaCierre: document.getElementById('fechaCierre').value,
-      fojas: document.getElementById('fojas').value,
-      tomos: document.getElementById('tomos').value,
-      destinoFinal: document.getElementById('destinoFinal').value,
-      original: document.getElementById('original').checked ? 'X' : '',
-      copia: document.getElementById('copia').checked ? 'X' : '',
-      cd: document.getElementById('cd').checked ? 'X' : '',
-      bloque: document.getElementById('bloque').value,
-      estanteria: document.getElementById('estanteria').value,
-      cajaUbicacion: document.getElementById('cajaUbicacion').value
-    };
-
-    // Almacenamiento seguro e inmediato en LocalStorage
-    let cola = JSON.parse(localStorage.getItem('cola_mtop') || '[]');
-    cola.push(registro);
-    localStorage.setItem('cola_mtop', JSON.stringify(cola));
-
-    // Refrescar estado visual de la cola y disparar envío asíncrono
-    actualizarBanner();
-    procesarCola();
-
-    // Resetear formulario manteniendo campos persistentes
-    docForm.reset();
-    document.getElementById('responsable').value = responsableVal;
-    document.getElementById('serie').value = serieVal;
-    document.getElementById('caja').value = cajaVal;
-    document.getElementById('expediente').focus();
-  });
-
-  // 4. MOTOR DE SINCRONIZACIÓN EN SEGUNDO PLANO
-  async function procesarCola() {
-    if (enviando || !navigator.onLine) return;
-
-    let cola = JSON.parse(localStorage.getItem('cola_mtop') || '[]');
-    if (cola.length === 0) return;
-
-    enviando = true;
-
-    while (cola.length > 0 && navigator.onLine) {
-      const item = cola[0];
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: {
-            'Content-Type': 'text/plain;charset=utf-8'
-          },
-          body: JSON.stringify(item)
-        });
-
-        // Remover de la cola local tras confirmar envío
-        cola.shift();
-        localStorage.setItem('cola_mtop', JSON.stringify(cola));
-        actualizarBanner();
-      } catch (err) {
-        console.error('Error enviando registro a Google Sheets:', err);
-        break; // Detener bucle si falla la conexión temporalmente
-      }
-    }
-
-    enviando = false;
-  }
-
-  // 5. BANNER VISUAL DE REGISTROS PENDIENTES
-  function actualizarBanner() {
-    let cola = JSON.parse(localStorage.getItem('cola_mtop') || '[]');
-    if (pendingBanner) {
-      if (cola.length > 0) {
-        pendingBanner.style.display = 'flex';
-        const pendingText = document.getElementById('pendingText');
-        if (pendingText) {
-          pendingText.textContent = `Sincronizando ${cola.length} registro(s) pendiente(s)...`;
-        }
-      } else {
-        pendingBanner.style.display = 'none';
-      }
-    }
-  }
-
-  if (btnSync) {
-    btnSync.addEventListener('click', procesarCola);
-  }
-
-  actualizarBanner();
-  procesarCola();
+  document.getElementById('form').addEventListener('submit', onSubmit);
 });
+
+window.addEventListener('online', () => { updateStatus(); trySync(); });
+window.addEventListener('offline', updateStatus);
+setInterval(trySync, 20000); // reintenta cada 20s por si acaso
+
+function updateStatus() {
+  const dot = document.getElementById('statusDot');
+  const label = document.getElementById('statusLabel');
+  if (navigator.onLine) {
+    dot.classList.remove('offline');
+    label.textContent = 'En línea';
+  } else {
+    dot.classList.add('offline');
+    label.textContent = 'Sin conexión — se guarda en este dispositivo';
+  }
+}
+
+function getQueue() {
+  try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; }
+  catch { return []; }
+}
+function setQueue(q) { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); updatePendingBadge(); }
+
+function updatePendingBadge() {
+  const q = getQueue();
+  const badge = document.getElementById('pendingBadge');
+  if (q.length > 0) {
+    badge.textContent = `${q.length} pendiente${q.length > 1 ? 's' : ''} de enviar`;
+    badge.classList.add('show');
+  } else {
+    badge.classList.remove('show');
+  }
+}
+
+function onSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+
+  if (!form.digitador.value.trim() || !form.serie.value || !form.caja.value) {
+    showToast('Digitador, Serie y N° Caja son obligatorios', 'error');
+    return;
+  }
+
+  const record = {
+    token: TOKEN,
+    digitador: form.digitador.value.trim(),
+    serie: form.serie.value,
+    subserie: form.subserie.value,
+    caja: form.caja.value,
+    expediente: form.expediente.value,
+    descripcion: form.descripcion.value,
+    numeroDocumento: form.numeroDocumento.value,
+    fechaApertura: form.fechaApertura.value,
+    fechaCierre: form.fechaCierre.value,
+    fojas: form.fojas.value,
+    tomos: form.tomos.value,
+    destinoFinal: form.destinoFinal.value,
+    original: form.original.checked,
+    copia: form.copia.checked,
+    cd: form.cd.checked,
+    bloque: form.bloque.value,
+    estanteria: form.estanteria.value,
+    cajaUbicacion: form.cajaUbicacion.value,
+    _localId: Date.now() + '-' + Math.random().toString(36).slice(2)
+  };
+
+  const q = getQueue();
+  q.push(record);
+  setQueue(q);
+
+  localStorage.setItem(DIGITADOR_KEY, record.digitador);
+  form.reset();
+  form.digitador.value = record.digitador;
+  showToast('Expediente guardado. Puedes seguir con el siguiente.', 'success');
+  trySync();
+}
+
+let syncing = false;
+async function trySync() {
+  if (syncing || !navigator.onLine) return;
+  if (!API_URL || API_URL.indexOf('PEGA_AQUI') === 0) return; // aún no configurado
+
+  const q = getQueue();
+  if (q.length === 0) return;
+
+  syncing = true;
+  const remaining = [...q];
+
+  for (const record of q) {
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita preflight CORS
+        body: JSON.stringify(record)
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const idx = remaining.findIndex((r) => r._localId === record._localId);
+        if (idx > -1) remaining.splice(idx, 1);
+      }
+    } catch (err) {
+      // sin conexión real o falla de red: se detiene y reintenta luego
+      break;
+    }
+  }
+
+  setQueue(remaining);
+  syncing = false;
+
+  if (remaining.length === 0 && q.length > 0) {
+    showToast('Todos los expedientes pendientes se sincronizaron', 'success');
+  }
+}
+
+let toastTimer;
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (type || '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
