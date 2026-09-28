@@ -46,10 +46,10 @@
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      background-color: #2ecc71;
-    }
-    .status-dot.offline {
       background-color: #e74c3c;
+    }
+    .status-dot.online {
+      background-color: #2ecc71;
     }
     .container {
       max-width: 800px;
@@ -173,7 +173,7 @@
     </div>
 
     <form id="docForm">
-      <!-- TARJETA: RESPONSABLE -->
+      <!-- TARJETA: RESPONSABLE DEL REGISTRO -->
       <div class="card">
         <div class="card-title">Responsable del Registro</div>
         <div class="form-group">
@@ -226,22 +226,22 @@
         </div>
       </div>
 
-      <!-- TARJETA: FECHAS EXTREMAS -->
+      <!-- TARJETA: FECHAS EXTREMAS (CON SELECTOR DE FECHA/CALENDARIO) -->
       <div class="card">
         <div class="card-title">Fechas Extremas</div>
         <div class="row">
           <div class="form-group">
             <label>Apertura</label>
-            <input type="text" id="fechaApertura" class="form-control" placeholder="AAAA-MM-DD o texto libre">
+            <input type="date" id="fechaApertura" class="form-control">
           </div>
           <div class="form-group">
             <label>Cierre</label>
-            <input type="text" id="fechaCierre" class="form-control" placeholder="AAAA-MM-DD o texto libre">
+            <input type="date" id="fechaCierre" class="form-control">
           </div>
         </div>
       </div>
 
-      <!-- TARJETA: CANTIDADES Y DESTINO -->
+      <!-- TARJETA: CANTIDADES Y SOPORTE -->
       <div class="card">
         <div class="card-title">Cantidades y Soporte</div>
         <div class="row">
@@ -269,21 +269,87 @@
         </div>
       </div>
 
-      <!-- TARJETA: UBICACIÓN FÍSICA -->
+      <!-- TARJETA: UBICACIÓN FÍSICA (DESPLEGABLES B1-B20, E1-E20, C1-C20) -->
       <div class="card">
         <div class="card-title">Ubicación Física</div>
         <div class="row">
           <div class="form-group">
             <label>Bloque</label>
-            <input type="text" id="bloque" class="form-control" placeholder="Ej: Bloque A">
+            <select id="bloque" class="form-control">
+              <option value="">Seleccione Bloque</option>
+              <option value="B1">B1</option>
+              <option value="B2">B2</option>
+              <option value="B3">B3</option>
+              <option value="B4">B4</option>
+              <option value="B5">B5</option>
+              <option value="B6">B6</option>
+              <option value="B7">B7</option>
+              <option value="B8">B8</option>
+              <option value="B9">B9</option>
+              <option value="B10">B10</option>
+              <option value="B11">B11</option>
+              <option value="B12">B12</option>
+              <option value="B13">B13</option>
+              <option value="B14">B14</option>
+              <option value="B15">B15</option>
+              <option value="B16">B16</option>
+              <option value="B17">B17</option>
+              <option value="B18">B18</option>
+              <option value="B19">B19</option>
+              <option value="B20">B20</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Estantería</label>
-            <input type="text" id="estanteria" class="form-control" placeholder="Ej: Estante 03">
+            <select id="estanteria" class="form-control">
+              <option value="">Seleccione Estantería</option>
+              <option value="E1">E1</option>
+              <option value="E2">E2</option>
+              <option value="E3">E3</option>
+              <option value="E4">E4</option>
+              <option value="E5">E5</option>
+              <option value="E6">E6</option>
+              <option value="E7">E7</option>
+              <option value="E8">E8</option>
+              <option value="E9">E9</option>
+              <option value="E10">E10</option>
+              <option value="E11">E11</option>
+              <option value="E12">E12</option>
+              <option value="E13">E13</option>
+              <option value="E14">E14</option>
+              <option value="E15">E15</option>
+              <option value="E16">E16</option>
+              <option value="E17">E17</option>
+              <option value="E18">E18</option>
+              <option value="E19">E19</option>
+              <option value="E20">E20</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Caja Ubicación</label>
-            <input type="text" id="cajaUbicacion" class="form-control" placeholder="Ej: Nivel 2">
+            <select id="cajaUbicacion" class="form-control">
+              <option value="">Seleccione Caja Ubicación</option>
+              <option value="C1">C1</option>
+              <option value="C2">C2</option>
+              <option value="C3">C3</option>
+              <option value="C4">C4</option>
+              <option value="C5">C5</option>
+              <option value="C6">C6</option>
+              <option value="C7">C7</option>
+              <option value="C8">C8</option>
+              <option value="C9">C9</option>
+              <option value="C10">C10</option>
+              <option value="C11">C11</option>
+              <option value="C12">C12</option>
+              <option value="C13">C13</option>
+              <option value="C14">C14</option>
+              <option value="C15">C15</option>
+              <option value="C16">C16</option>
+              <option value="C17">C17</option>
+              <option value="C18">C18</option>
+              <option value="C19">C19</option>
+              <option value="C20">C20</option>
+            </select>
           </div>
         </div>
       </div>
