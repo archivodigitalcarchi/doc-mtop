@@ -1,4 +1,4 @@
-const CACHE_NAME = 'doc-mtop-v12';
+const CACHE_NAME = 'doc-mtop-v14';
 const ASSETS = [
   './',
   './index.html',
