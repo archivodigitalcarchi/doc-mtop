@@ -1,4 +1,4 @@
-const CACHE_NAME = 'doc-mtop-v2';
+const CACHE_NAME = 'doc-mtop-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -28,7 +28,7 @@ self.addEventListener('activate', (event) => {
 // Los envíos a la API (fetch a Apps Script) NO se cachean, viajan directo a la red.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return; // deja pasar llamadas a Apps Script
+  if (url.origin !== self.location.origin) return; // Deja pasar llamadas a Apps Script
 
   event.respondWith(
     caches.match(event.request).then((cached) => cached || fetch(event.request))
