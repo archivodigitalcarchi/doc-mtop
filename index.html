@@ -1,366 +1,139 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ministerio de Infraestructura y Tecnología - Inventario Documental</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1a4051">
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    body {
-      background-color: #f4f5f7;
-      color: #333;
-      padding-bottom: 40px;
-    }
-    header {
-      background-color: #1a4051;
-      color: white;
-      padding: 15px 20px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    header h1 {
-      font-size: 1.1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      opacity: 0.9;
-    }
-    header h2 {
-      font-size: 1.3rem;
-      font-weight: 600;
-      margin-top: 4px;
-    }
-    .status-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-      font-size: 0.85rem;
-    }
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background-color: #2ecc71; /* Verde por defecto */
-      display: inline-block;
-    }
-    .status-dot.offline {
-      background-color: #e74c3c; /* Rojo si no hay conexión */
-    }
-    .container {
-      max-width: 800px;
-      margin: 20px auto;
-      padding: 0 15px;
-    }
-    .card {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      border: 1px solid #e1e4e8;
-    }
-    .card-title {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: #1a4051;
-      text-transform: uppercase;
-      border-bottom: 2px solid #e1e4e8;
-      padding-bottom: 6px;
-      margin-bottom: 15px;
-    }
-    .form-group {
-      margin-bottom: 15px;
-    }
-    .form-group label {
-      display: block;
-      font-weight: 600;
-      font-size: 0.85rem;
-      margin-bottom: 5px;
-      color: #444;
-    }
-    .form-control {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 0.95rem;
-      background-color: #fafafa;
-    }
-    .form-control:focus {
-      outline: none;
-      border-color: #1a4051;
-      background-color: #fff;
-    }
-    .row {
-      display: flex;
-      gap: 15px;
-      flex-wrap: wrap;
-    }
-    .row .form-group {
-      flex: 1;
-      min-width: 180px;
-    }
-    .checkbox-group {
-      display: flex;
-      gap: 20px;
-      align-items: center;
-      padding-top: 5px;
-    }
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-    .checkbox-label input {
-      width: 18px;
-      height: 18px;
-    }
-    textarea.form-control {
-      resize: vertical;
-      min-height: 70px;
-    }
-    .btn-submit {
-      width: 100%;
-      background-color: #1a4051;
-      color: white;
-      border: none;
-      padding: 14px;
-      font-size: 1rem;
-      font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-submit:hover {
-      background-color: #122f3d;
-    }
-    .pending-banner {
-      background-color: #fff3cd;
-      color: #856404;
-      padding: 10px 15px;
-      border-radius: 6px;
-      margin-bottom: 15px;
-      font-size: 0.9rem;
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ministerio de Infraestructura y Tecnología — Gestión Documental</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1F4E5F">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <header>
-    <h1>Ministerio de Infraestructura y Tecnología</h1>
-    <h2>Inventario de Transferencia Documental</h2>
-    <div class="status-bar">
-      <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">En línea</span>
-    </div>
-  </header>
-
-  <div class="container">
-    <div class="pending-banner" id="pendingBanner">
-      <span id="pendingText">Hay registros guardados localmente pendientes de envío.</span>
-      <button id="btnSync" style="padding: 4px 10px; cursor: pointer;">Sincronizar</button>
-    </div>
-
-    <form id="docForm">
-      <!-- RESPONSABLE DEL REGISTRO -->
-      <div class="card">
-        <div class="card-title">Responsable del Registro</div>
-        <div class="form-group">
-          <label>Comp Responsable *</label>
-          <input type="text" id="responsable" class="form-control" placeholder="Nombre completo o iniciales" required>
-        </div>
-      </div>
-
-      <!-- IDENTIFICACIÓN DEL EXPEDIENTE -->
-      <div class="card">
-        <div class="card-title">Identificación del Expediente</div>
-        
-        <div class="form-group">
-          <label>Serie *</label>
-          <input type="text" id="serie" class="form-control" placeholder="Escriba o seleccione la serie" list="listaSeries" required>
-          <datalist id="listaSeries">
-            <option value="ADMINISTRATIVO">
-            <option value="FINANCIERO">
-            <option value="TALENTO HUMANO">
-            <option value="JURÍDICO">
-            <option value="OBRAS PÚBLICAS">
-            <option value="TRANSPORTES">
-          </datalist>
-        </div>
-
-        <div class="form-group">
-          <label>Subserie</label>
-          <textarea id="subserie" class="form-control" placeholder="DESCRIPCIÓN BREVE DE LA SUBSERIE"></textarea>
-        </div>
-
-        <div class="row">
-          <div class="form-group">
-            <label>N° Caja *</label>
-            <input type="text" id="caja" class="form-control" placeholder="Permite números y letras (ej: 001-A)" required>
-          </div>
-          <div class="form-group">
-            <label>N° Expediente</label>
-            <input type="text" id="expediente" class="form-control" placeholder="Permite cualquier formato">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Descripción de serie documental</label>
-          <textarea id="descripcion" class="form-control" placeholder="Permite todo tipo de caracteres, guiones, símbolos, etc."></textarea>
-        </div>
-
-        <div class="form-group">
-          <label>Número de documento</label>
-          <input type="text" id="numeroDocumento" class="form-control" placeholder="Ej: MTOP-CZ1-2026-001-M / Oficios / Memo">
-        </div>
-      </div>
-
-      <!-- FECHAS EXTREMAS -->
-      <div class="card">
-        <div class="card-title">Fechas Extremas</div>
-        <div class="row">
-          <div class="form-group">
-            <label>Fecha de Apertura (Calendario)</label>
-            <input type="date" id="fechaApertura" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>Fecha de Cierre (Calendario)</label>
-            <input type="date" id="fechaCierre" class="form-control">
-          </div>
-        </div>
-      </div>
-
-      <!-- CANTIDADES Y SOPORTE -->
-      <div class="card">
-        <div class="card-title">Cantidades y Soporte</div>
-        <div class="row">
-          <div class="form-group">
-            <label>N° Fojas</label>
-            <input type="text" id="fojas" class="form-control" placeholder="Ej: 150">
-          </div>
-          <div class="form-group">
-            <label>N° Tomos / Cuerpos</label>
-            <input type="text" id="tomos" class="form-control" placeholder="Ej: 1 de 2">
-          </div>
-          <div class="form-group">
-            <label>Destino Final</label>
-            <input type="text" id="destinoFinal" class="form-control" placeholder="Ej: Conservación / Eliminación">
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-top: 10px;">
-          <label>Soporte Documental</label>
-          <div class="checkbox-group">
-            <label class="checkbox-label"><input type="checkbox" id="original"> Original</label>
-            <label class="checkbox-label"><input type="checkbox" id="copia"> Copia</label>
-            <label class="checkbox-label"><input type="checkbox" id="cd"> CD / Digital</label>
-          </div>
-        </div>
-      </div>
-
-      <!-- UBICACIÓN FÍSICA -->
-      <div class="card">
-        <div class="card-title">Ubicación Física</div>
-        <div class="row">
-          <div class="form-group">
-            <label>Bloque (B1 - B20)</label>
-            <select id="bloque" class="form-control">
-              <option value="">-- Seleccionar --</option>
-              <option value="B1">B1</option>
-              <option value="B2">B2</option>
-              <option value="B3">B3</option>
-              <option value="B4">B4</option>
-              <option value="B5">B5</option>
-              <option value="B6">B6</option>
-              <option value="B7">B7</option>
-              <option value="B8">B8</option>
-              <option value="B9">B9</option>
-              <option value="B10">B10</option>
-              <option value="B11">B11</option>
-              <option value="B12">B12</option>
-              <option value="B13">B13</option>
-              <option value="B14">B14</option>
-              <option value="B15">B15</option>
-              <option value="B16">B16</option>
-              <option value="B17">B17</option>
-              <option value="B18">B18</option>
-              <option value="B19">B19</option>
-              <option value="B20">B20</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Estantería (EST1 - EST20)</label>
-            <select id="estanteria" class="form-control">
-              <option value="">-- Seleccionar --</option>
-              <option value="EST1">EST1</option>
-              <option value="EST2">EST2</option>
-              <option value="EST3">EST3</option>
-              <option value="EST4">EST4</option>
-              <option value="EST5">EST5</option>
-              <option value="EST6">EST6</option>
-              <option value="EST7">EST7</option>
-              <option value="EST8">EST8</option>
-              <option value="EST9">EST9</option>
-              <option value="EST10">EST10</option>
-              <option value="EST11">EST11</option>
-              <option value="EST12">EST12</option>
-              <option value="EST13">EST13</option>
-              <option value="EST14">EST14</option>
-              <option value="EST15">EST15</option>
-              <option value="EST16">EST16</option>
-              <option value="EST17">EST17</option>
-              <option value="EST18">EST18</option>
-              <option value="EST19">EST19</option>
-              <option value="EST20">EST20</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Caja Ubicación (C1 - C20)</label>
-            <select id="cajaUbicacion" class="form-control">
-              <option value="">-- Seleccionar --</option>
-              <option value="C1">C1</option>
-              <option value="C2">C2</option>
-              <option value="C3">C3</option>
-              <option value="C4">C4</option>
-              <option value="C5">C5</option>
-              <option value="C6">C6</option>
-              <option value="C7">C7</option>
-              <option value="C8">C8</option>
-              <option value="C9">C9</option>
-              <option value="C10">C10</option>
-              <option value="C11">C11</option>
-              <option value="C12">C12</option>
-              <option value="C13">C13</option>
-              <option value="C14">C14</option>
-              <option value="C15">C15</option>
-              <option value="C16">C16</option>
-              <option value="C17">C17</option>
-              <option value="C18">C18</option>
-              <option value="C19">C19</option>
-              <option value="C20">C20</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <button type="submit" class="btn-submit">Guardar expediente y continuar con el siguiente</button>
-    </form>
+<div class="topbar">
+  <p class="eyebrow">Ministerio de Infraestructura y Tecnología</p>
+  <h1>Inventario de Transferencia Documental</h1>
+  <div class="status-row">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusLabel">En línea</span>
+    <span class="pending-badge" id="pendingBadge"></span>
   </div>
+</div>
 
-  <script src="app.js"></script>
+<main>
+  <form id="form">
+
+    <div class="card">
+      <h2>Responsable de captura</h2>
+      <label for="digitador">Nombre del digitador *</label>
+      <input type="text" id="digitador" name="digitador" placeholder="Nombres y apellidos" autocomplete="off" required>
+    </div>
+
+    <div class="card">
+      <h2>Identificación del expediente</h2>
+
+      <label for="serie">Serie *</label>
+      <select id="serie" name="serie" required>
+        <option value="">Selecciona una serie</option>
+      </select>
+
+      <label for="subserie">Subserie</label>
+      <textarea id="subserie" name="subserie" placeholder="Descripción breve de la subserie"></textarea>
+
+      <div class="row2">
+        <div>
+          <label for="caja">N° Caja *</label>
+          <input type="text" id="caja" name="caja" required>
+        </div>
+        <div>
+          <label for="expediente">N° Expediente</label>
+          <input type="text" id="expediente" name="expediente">
+        </div>
+      </div>
+
+      <label for="descripcion">Descripción de serie documental</label>
+      <textarea id="descripcion" name="descripcion"></textarea>
+
+      <label for="numeroDocumento">Número de documento</label>
+      <input type="text" id="numeroDocumento" name="numeroDocumento">
+    </div>
+
+    <div class="card">
+      <h2>Fechas extremas</h2>
+      <div class="row2">
+        <div>
+          <label for="fechaApertura">Apertura</label>
+          <input type="date" id="fechaApertura" name="fechaApertura">
+        </div>
+        <div>
+          <label for="fechaCierre">Cierre</label>
+          <input type="date" id="fechaCierre" name="fechaCierre">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Cantidades y destino</h2>
+      <div class="row2">
+        <div>
+          <label for="fojas">N° Fojas</label>
+          <input type="text" id="fojas" name="fojas" autocomplete="off">
+        </div>
+        <div>
+          <label for="tomos">N° Tomos/Cuerpos</label>
+          <input type="text" id="tomos" name="tomos" autocomplete="off">
+        </div>
+      </div>
+
+      <label for="destinoFinal">Destino final</label>
+      <input type="text" id="destinoFinal" name="destinoFinal">
+
+      <div class="checks">
+        <div class="check-item">
+          <input type="checkbox" id="original" name="original">
+          <label for="original">Original</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="copia" name="copia">
+          <label for="copia">Copia</label>
+        </div>
+        <div class="check-item">
+          <input type="checkbox" id="cd" name="cd">
+          <label for="cd">CD</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Ubicación física</h2>
+      <label for="bloque">Bloque</label>
+      <select id="bloque" name="bloque"><option value="">Selecciona</option></select>
+
+      <label for="estanteria">Estantería</label>
+      <select id="estanteria" name="estanteria"><option value="">Selecciona</option></select>
+
+      <label for="cajaUbicacion">Caja (ubicación física)</label>
+      <select id="cajaUbicacion" name="cajaUbicacion"><option value="">Selecciona</option></select>
+    </div>
+
+  </form>
+</main>
+
+<div class="footer-bar">
+  <button type="submit" form="form" class="btn">Guardar expediente y continuar con el siguiente</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
 </body>
 </html>
+
