@@ -1,20 +1,21 @@
-﻿// ============================================================
+// ============================================================
 // CONFIGURA ESTO cuando despliegues tu Apps Script como Web App
 // ============================================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbyY9TNIcH7qu8IsuKr5zg-Y7SfUVd5e8LfqrQFzXrX-e5ueJE-4YoJgUG0cIYKmF-2H/exec';
-const TOKEN = 'mtop2026';// debe ser igual al TOKEN en Code.gs
+const TOKEN = 'mtop2026'; // debe ser igual al TOKEN en Code.gs
 
 const QUEUE_KEY = 'doc_mtop_queue';
 
 // ---- Listas de opciones ----
 const SERIES = [
-  'TH - Talento Humano', 'SG - Secretaría General', 'TIC - Tecnologías de la Información',
-  'FIN - Financiero', 'JUR - Jurídico', 'PU - Proyectos Urbanos', 'PR - Proyectos Rurales',
-  'DP - Dirección Provincial', 'TS - Técnico Social', 'T - Técnico', 'C - Contabilidad'
+  'TH - TALENTO HUMANO', 'SG - SECRETARÍA GENERAL', 'TIC - TECNOLOGÍAS DE LA INFORMACIÓN',
+  'FIN - FINANCIERO', 'JUR - JURÍDICO', 'PU - PROYECTOS URBANOS', 'PR - PROYECTOS RURALES',
+  'DP - DIRECCIÓN PROVINCIAL', 'TS - TÉCNICO SOCIAL', 'T - TÉCNICO', 'C - CONTABILIDAD'
 ];
 
 function fillSelect(id, values) {
   const el = document.getElementById(id);
+  if (!el) return;
   values.forEach((v) => {
     const opt = document.createElement('option');
     opt.value = v;
@@ -48,11 +49,11 @@ function updateStatus() {
   const dot = document.getElementById('statusDot');
   const label = document.getElementById('statusLabel');
   if (navigator.onLine) {
-    dot.classList.remove('offline');
-    label.textContent = 'En línea';
+    if (dot) dot.classList.remove('offline');
+    if (label) label.textContent = 'En línea';
   } else {
-    dot.classList.add('offline');
-    label.textContent = 'Sin conexión — se guarda en este dispositivo';
+    if (dot) dot.classList.add('offline');
+    if (label) label.textContent = 'Sin conexión — se guarda en este dispositivo';
   }
 }
 
@@ -65,11 +66,13 @@ function setQueue(q) { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); updat
 function updatePendingBadge() {
   const q = getQueue();
   const badge = document.getElementById('pendingBadge');
-  if (q.length > 0) {
-    badge.textContent = `${q.length} pendiente${q.length > 1 ? 's' : ''} de enviar`;
-    badge.classList.add('show');
-  } else {
-    badge.classList.remove('show');
+  if (badge) {
+    if (q.length > 0) {
+      badge.textContent = `${q.length} pendiente${q.length > 1 ? 's' : ''} de enviar`;
+      badge.classList.add('show');
+    } else {
+      badge.classList.remove('show');
+    }
   }
 }
 
@@ -78,27 +81,31 @@ function onSubmit(e) {
   const form = e.target;
   const submitBtn = form.querySelector('button[type="submit"]');
 
-  if (!form.serie.value || !form.caja.value) {
-    showToast('Serie y N° Caja son obligatorios', 'error');
+  // Validar campos requeridos (incluye digitador)
+  const digitadorVal = form.digitador ? form.digitador.value.trim() : '';
+  if (!digitadorVal || !form.serie.value || !form.caja.value) {
+    showToast('Digitador, Serie y N° Caja son obligatorios', 'error');
     return;
   }
 
   // Deshabilitar botón temporalmente para evitar doble clic accidental
   if (submitBtn) submitBtn.disabled = true;
 
+  // Construcción del objeto garantizando todo texto en MAYÚSCULAS
   const record = {
     token: TOKEN,
-    serie: form.serie.value,
-    subserie: form.subserie.value,
+    digitador: digitadorVal.toUpperCase(),
+    serie: (form.serie.value || '').toUpperCase(),
+    subserie: (form.subserie.value || '').toUpperCase().trim(),
     caja: form.caja.value,
-    expediente: form.expediente.value,
-    descripcion: form.descripcion.value,
-    numeroDocumento: form.numeroDocumento.value,
+    expediente: (form.expediente.value || '').toUpperCase().trim(),
+    descripcion: (form.descripcion.value || '').toUpperCase().trim(),
+    numeroDocumento: (form.numeroDocumento.value || '').toUpperCase().trim(),
     fechaApertura: form.fechaApertura.value,
     fechaCierre: form.fechaCierre.value,
     fojas: form.fojas.value,
     tomos: form.tomos.value,
-    destinoFinal: form.destinoFinal.value,
+    destinoFinal: (form.destinoFinal.value || '').toUpperCase().trim(),
     original: form.original.checked,
     copia: form.copia.checked,
     cd: form.cd.checked,
@@ -146,7 +153,6 @@ async function trySync() {
       
       if (data.ok) {
         // ELIMINACIÓN INMEDIATA DEL REGISTRO EXITOSO:
-        // Se vuelve a leer la cola por si cambió y se elimina el elemento enviado
         const updatedQueue = getQueue().filter(r => r._localId !== record._localId);
         setQueue(updatedQueue);
       } else {
@@ -169,6 +175,7 @@ async function trySync() {
 let toastTimer;
 function showToast(msg, type) {
   const el = document.getElementById('toast');
+  if (!el) return;
   el.textContent = msg;
   el.className = 'toast show ' + (type || '');
   clearTimeout(toastTimer);
