@@ -1,134 +1,173 @@
-/**
- * FRONTEND APP — Sistema de Gestión Documental MTOP
- */
+// URL de Web App de Google Apps Script
+const SCRIPT_URL = 'https://script.google.com/macros/s/TU_SCRIPT_ID_AQUI/exec';
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_REEMPLAZA_CON_TU_ID_AQUÍ/exec'; // Pon aquí tu URL de Apps Script
-const TOKEN = 'mtop2026';
+// Registro del Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(() => console.log('Service Worker registrado correctamente'))
+    .catch(err => console.error('Error al registrar Service Worker:', err));
+}
 
+// Elementos del DOM
+const docForm = document.getElementById('docForm');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const pendingBanner = document.getElementById('pendingBanner');
 const pendingText = document.getElementById('pendingText');
 const btnSync = document.getElementById('btnSync');
-const form = document.getElementById('docForm');
 
-function updateOnlineStatus() {
+// Monitoreo de Conexión
+function checkOnlineStatus() {
   if (navigator.onLine) {
-    statusDot.classList.remove('offline');
-    statusText.textContent = 'En línea';
+    statusDot.classList.add('online');
+    statusText.textContent = 'En línea (Sincronización activa)';
     syncPendingData();
   } else {
-    statusDot.classList.add('offline');
-    statusText.textContent = 'Modo sin conexión (guardando localmente)';
+    statusDot.classList.remove('online');
+    statusText.textContent = 'Sin conexión (Modo Offline activo)';
   }
+  updatePendingUI();
 }
 
-window.addEventListener('online', updateOnlineStatus);
-window.addEventListener('offline', updateOnlineStatus);
-updateOnlineStatus();
+window.addEventListener('online', checkOnlineStatus);
+window.addEventListener('offline', checkOnlineStatus);
 
-function getPendingData() {
-  const records = localStorage.getItem('mtop_pending_records');
-  return records ? JSON.parse(records) : [];
+// Manejo de almacenamiento local (IndexedDB)
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('MTOP_InventarioDB', 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('registros')) {
+        db.createObjectStore('registros', { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 }
 
-function savePendingData(data) {
-  const records = getPendingData();
-  records.push(data);
-  localStorage.setItem('mtop_pending_records', JSON.stringify(records));
-  checkPendingRecords();
+async function saveRecordLocally(data) {
+  const db = await openDB();
+  const tx = db.transaction('registros', 'readwrite');
+  const store = tx.objectStore('registros');
+  await store.add({ data, timestamp: new Date().getTime() });
+  updatePendingUI();
 }
 
-function checkPendingRecords() {
-  const records = getPendingData();
-  if (records.length > 0) {
+async function getPendingRecords() {
+  const db = await openDB();
+  const tx = db.transaction('registros', 'readonly');
+  const store = tx.objectStore('registros');
+  return new Promise((resolve) => {
+    const req = store.getAll();
+    req.onsuccess = () => resolve(req.result);
+  });
+}
+
+async function clearPendingRecords() {
+  const db = await openDB();
+  const tx = db.transaction('registros', 'readwrite');
+  const store = tx.objectStore('registros');
+  await store.clear();
+  updatePendingUI();
+}
+
+async function updatePendingUI() {
+  const pending = await getPendingRecords();
+  if (pending.length > 0) {
     pendingBanner.style.display = 'flex';
-    pendingText.textContent = `Hay ${records.length} registro(s) pendiente(s) de envío.`;
+    pendingText.textContent = `Hay ${pending.length} registro(s) guardado(s) localmente pendiente(s) de envío.`;
   } else {
     pendingBanner.style.display = 'none';
   }
 }
 
-checkPendingRecords();
-
-async function sendData(data) {
-  const payload = { ...data, token: TOKEN };
-  const response = await fetch(SCRIPT_URL, {
+// Envío de datos al Servidor
+async function sendDataToServer(data) {
+  return fetch(SCRIPT_URL, {
     method: 'POST',
     mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
   });
-  return response;
 }
 
-async function syncPendingData() {
-  if (!navigator.onLine) return;
-  const records = getPendingData();
-  if (records.length === 0) return;
-
-  btnSync.disabled = true;
-  btnSync.textContent = 'Enviando...';
-
-  const remaining = [];
-  for (let item of records) {
-    try {
-      await sendData(item);
-    } catch (e) {
-      remaining.push(item);
-    }
-  }
-
-  localStorage.setItem('mtop_pending_records', JSON.stringify(remaining));
-  btnSync.disabled = false;
-  btnSync.textContent = 'Sincronizar';
-  checkPendingRecords();
-}
-
-btnSync.addEventListener('click', syncPendingData);
-
-form.addEventListener('submit', async (e) => {
+// Envío del Formulario
+docForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  // Captura de todos los datos permitiendo cualquier tipo de carácter
+  // Preservar valores persistentes (Responsable, Serie y Caja)
+  const responsableVal = document.getElementById('responsable').value;
+  const serieVal = document.getElementById('serie').value;
+  const cajaVal = document.getElementById('caja').value;
+
   const formData = {
-    responsable: document.getElementById('responsable').value.trim(),
-    serie: document.getElementById('serie').value.trim(),
-    subserie: document.getElementById('subserie').value.trim(),
-    caja: document.getElementById('caja').value.trim(),
-    expediente: document.getElementById('expediente').value.trim(),
-    descripcion: document.getElementById('descripcion').value.trim(),
-    numeroDocumento: document.getElementById('numeroDocumento').value.trim(),
-    fechaApertura: document.getElementById('fechaApertura').value.trim(),
-    fechaCierre: document.getElementById('fechaCierre').value.trim(),
-    fojas: document.getElementById('fojas').value.trim(),
-    tomos: document.getElementById('tomos').value.trim(),
-    destinoFinal: document.getElementById('destinoFinal').value.trim(),
-    original: document.getElementById('original').checked,
-    copia: document.getElementById('copia').checked,
-    cd: document.getElementById('cd').checked,
-    bloque: document.getElementById('bloque').value.trim(),
-    estanteria: document.getElementById('estanteria').value.trim(),
-    cajaUbicacion: document.getElementById('cajaUbicacion').value.trim()
+    responsable: responsableVal,
+    serie: serieVal,
+    subserie: document.getElementById('subserie').value,
+    caja: cajaVal,
+    expediente: document.getElementById('expediente').value,
+    descripcion: document.getElementById('descripcion').value,
+    numeroDocumento: document.getElementById('numeroDocumento').value,
+    fechaApertura: document.getElementById('fechaApertura').value,
+    fechaCierre: document.getElementById('fechaCierre').value,
+    fojas: document.getElementById('fojas').value,
+    tomos: document.getElementById('tomos').value,
+    destinoFinal: document.getElementById('destinoFinal').value,
+    original: document.getElementById('original').checked ? 'X' : '',
+    copia: document.getElementById('copia').checked ? 'X' : '',
+    cd: document.getElementById('cd').checked ? 'X' : '',
+    bloque: document.getElementById('bloque').value,
+    estanteria: document.getElementById('estanteria').value,
+    cajaUbicacion: document.getElementById('cajaUbicacion').value
   };
 
   if (navigator.onLine) {
     try {
-      await sendData(formData);
-      alert('Expediente guardado con éxito');
-      form.reset();
+      await sendDataToServer(formData);
+      alert('¡Expediente guardado correctamente!');
     } catch (err) {
-      savePendingData(formData);
-      alert('Guardado localmente por problemas de red.');
-      form.reset();
+      console.warn('Error al enviar. Guardando localmente:', err);
+      await saveRecordLocally(formData);
+      alert('Guardado en la memoria del dispositivo (Modo Offline). Se enviará al reconectarse.');
     }
   } else {
-    savePendingData(formData);
-    alert('Guardado en modo sin conexión.');
-    form.reset();
+    await saveRecordLocally(formData);
+    alert('Guardado en la memoria del dispositivo (Sin conexión). Se enviará al reconectarse.');
   }
+
+  // Resetear formulario manteniendo Responsable, Serie y Caja
+  docForm.reset();
+  document.getElementById('responsable').value = responsableVal;
+  document.getElementById('serie').value = serieVal;
+  document.getElementById('caja').value = cajaVal;
+  
+  // Enfocar en Expediente para continuar la carga rápida
+  document.getElementById('expediente').focus();
 });
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(err => console.error('Error SW:', err));
+// Sincronización Manual/Automática
+async function syncPendingData() {
+  if (!navigator.onLine) return;
+
+  const pending = await getPendingRecords();
+  if (pending.length === 0) return;
+
+  try {
+    for (const record of pending) {
+      await sendDataToServer(record.data);
+    }
+    await clearPendingRecords();
+    alert('¡Registros guardados en local sincronizados con éxito!');
+  } catch (err) {
+    console.error('Error durante la sincronización:', err);
+  }
 }
+
+btnSync.addEventListener('click', syncPendingData);
+
+// Inicialización
+checkOnlineStatus();
