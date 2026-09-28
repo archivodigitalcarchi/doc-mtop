@@ -1,151 +1,233 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ministerio de Infraestructura y Tecnología — Gestión Documental</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#1F4E5F">
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ministerio de Infraestructura y Tecnología - Inventario Documental</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a4051">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background-color: #f4f5f7;
+      color: #333;
+      padding-bottom: 40px;
+    }
+    header {
+      background-color: #1a4051;
+      color: white;
+      padding: 15px 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    header h1 {
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.9;
+    }
+    header h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 0.85rem;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: #2ecc71;
+    }
+    .status-dot.offline {
+      background-color: #e74c3c;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid #e1e4e8;
+    }
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #1a4051;
+      text-transform: uppercase;
+      border-bottom: 2px solid #e1e4e8;
+      padding-bottom: 6px;
+      margin-bottom: 15px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 5px;
+      color: #444;
+    }
+    .form-control {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      background-color: #fafafa;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: #1a4051;
+      background-color: #fff;
+    }
+    .row {
+      display: flex;
+      gap: 15px;
+    }
+    .row .form-group {
+      flex: 1;
+    }
+    textarea.form-control {
+      resize: vertical;
+      min-height: 70px;
+    }
+    .btn-submit {
+      width: 100%;
+      background-color: #1a4051;
+      color: white;
+      border: none;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-submit:hover {
+      background-color: #122f3d;
+    }
+    .pending-banner {
+      background-color: #fff3cd;
+      color: #856404;
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+  </style>
 </head>
 <body>
 
-<div class="topbar">
-  <p class="eyebrow">Ministerio de Infraestructura y Tecnología</p>
-  <h1>Inventario de Transferencia Documental</h1>
-  <div class="status-row">
-    <span class="dot" id="statusDot"></span>
-    <span id="statusLabel">En línea</span>
-    <span class="pending-badge" id="pendingBadge"></span>
+  <header>
+    <h1>Ministerio de Infraestructura y Tecnología</h1>
+    <h2>Inventario de Transferencia Documental</h2>
+    <div class="status-bar">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Comprobando conexión...</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="pending-banner" id="pendingBanner">
+      <span id="pendingText">Hay registros guardados localmente pendientes de envío.</span>
+      <button id="btnSync" style="padding: 4px 10px; cursor: pointer;">Sincronizar</button>
+    </div>
+
+    <form id="docForm">
+      <div class="card">
+        <div class="card-title">Identificación del Expediente</div>
+        
+        <div class="form-group">
+          <label>Serie *</label>
+          <select id="serie" class="form-control" required>
+            <option value="">Selecciona una serie</option>
+            <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
+            <option value="FINANCIERO">FINANCIERO</option>
+            <option value="TALENTO HUMANO">TALENTO HUMANO</option>
+            <option value="JURÍDICO">JURÍDICO</option>
+            <option value="OBRAS PÚBLICAS">OBRAS PÚBLICAS</option>
+            <option value="TRANSPORTES">TRANSPORTES</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Subserie</label>
+          <textarea id="subserie" class="form-control" placeholder="DESCRIPCIÓN BREVE DE LA SUBSERIE"></textarea>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label>N° Caja *</label>
+            <input type="text" id="caja" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>N° Expediente</label>
+            <input type="text" id="expediente" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Descripción de serie documental</label>
+          <textarea id="descripcion" class="form-control"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Número de documento</label>
+          <input type="text" id="numeroDocumento" class="form-control">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Fechas Extremas</div>
+        <div class="row">
+          <div class="form-group">
+            <label>Apertura</label>
+            <input type="date" id="fechaApertura" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Cierre</label>
+            <input type="date" id="fechaCierre" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Cantidades y Destino</div>
+        <div class="row">
+          <div class="form-group">
+            <label>N° Fojas</label>
+            <input type="number" id="fojas" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>N° Tomos/Cuerpos</label>
+            <input type="number" id="tomos" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit">Guardar expediente y continuar con el siguiente</button>
+    </form>
   </div>
-</div>
 
-<main>
-  <form id="form">
-
-    <!-- RESPONSABLE DEL REGISTRO -->
-    <div class="card">
-      <h2>Responsable del registro</h2>
-      <label for="digitador">Digitador *</label>
-      <input 
-        type="text" 
-        id="digitador" 
-        name="digitador" 
-        required 
-        placeholder="NOMBRE O INICIALES DEL DIGITADOR"
-        autocomplete="off"
-        oninput="this.value = this.value.toUpperCase()"
-      >
-    </div>
-
-    <!-- IDENTIFICACIÓN DEL EXPEDIENTE -->
-    <div class="card">
-      <h2>Identificación del expediente</h2>
-
-      <label for="serie">Serie *</label>
-      <select id="serie" name="serie" required>
-        <option value="">Selecciona una serie</option>
-      </select>
-
-      <label for="subserie">Subserie</label>
-      <textarea id="subserie" name="subserie" placeholder="Descripción breve de la subserie" oninput="this.value = this.value.toUpperCase()"></textarea>
-
-      <div class="row2">
-        <div>
-          <label for="caja">N° Caja *</label>
-          <input type="text" id="caja" name="caja" required autocomplete="off" oninput="this.value = this.value.toUpperCase()">
-        </div>
-        <div>
-          <label for="expediente">N° Expediente</label>
-          <input type="text" id="expediente" name="expediente" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
-        </div>
-      </div>
-
-      <label for="descripcion">Descripción de serie documental</label>
-      <textarea id="descripcion" name="descripcion" oninput="this.value = this.value.toUpperCase()"></textarea>
-
-      <label for="numeroDocumento">Número de documento</label>
-      <input type="text" id="numeroDocumento" name="numeroDocumento" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
-    </div>
-
-    <!-- FECHAS EXTREMAS -->
-    <div class="card">
-      <h2>Fechas extremas</h2>
-      <div class="row2">
-        <div>
-          <label for="fechaApertura">Apertura</label>
-          <input type="date" id="fechaApertura" name="fechaApertura">
-        </div>
-        <div>
-          <label for="fechaCierre">Cierre</label>
-          <input type="date" id="fechaCierre" name="fechaCierre">
-        </div>
-      </div>
-    </div>
-
-    <!-- CANTIDADES Y DESTINO -->
-    <div class="card">
-      <h2>Cantidades y destino</h2>
-      <div class="row2">
-        <div>
-          <label for="fojas">N° Fojas</label>
-          <input type="text" id="fojas" name="fojas" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
-        </div>
-        <div>
-          <label for="tomos">N° Tomos/Cuerpos</label>
-          <input type="text" id="tomos" name="tomos" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
-        </div>
-      </div>
-
-      <label for="destinoFinal">Destino final</label>
-      <input type="text" id="destinoFinal" name="destinoFinal" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
-
-      <div class="checks">
-        <div class="check-item">
-          <input type="checkbox" id="original" name="original">
-          <label for="original">Original</label>
-        </div>
-        <div class="check-item">
-          <input type="checkbox" id="copia" name="copia">
-          <label for="copia">Copia</label>
-        </div>
-        <div class="check-item">
-          <input type="checkbox" id="cd" name="cd">
-          <label for="cd">CD</label>
-        </div>
-      </div>
-    </div>
-
-    <!-- UBICACIÓN FÍSICA -->
-    <div class="card">
-      <h2>Ubicación física</h2>
-      <label for="bloque">Bloque</label>
-      <select id="bloque" name="bloque"><option value="">Selecciona</option></select>
-
-      <label for="estanteria">Estantería</label>
-      <select id="estanteria" name="estanteria"><option value="">Selecciona</option></select>
-
-      <label for="cajaUbicacion">Caja (ubicación física)</label>
-      <select id="cajaUbicacion" name="cajaUbicacion"><option value="">Selecciona</option></select>
-    </div>
-
-  </form>
-</main>
-
-<div class="footer-bar">
-  <button type="submit" form="form" class="btn">Guardar expediente y continuar con el siguiente</button>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script src="app.js"></script>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    });
-  }
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
