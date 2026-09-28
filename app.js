@@ -1,5 +1,5 @@
-// URL de tu Google Apps Script (Sustituye con la tuya si la cambiaste)
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx.../exec"; 
+// URL directa de tu ejecutable de Google Apps Script
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY9TNlcH7qu8IsuKr5zg-Y7SfUVd5e8LfqrQFzXrX-e5ueJE-4YoJgUG0cIYKmF-2H/exec";
 
 document.addEventListener('DOMContentLoaded', () => {
   const docForm = document.getElementById('docForm');
@@ -8,22 +8,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const pendingBanner = document.getElementById('pendingBanner');
   const btnSync = document.getElementById('btnSync');
 
-  // REGISTRO DEL SERVICE WORKER
+  // Registrar Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Service Worker registrado:', reg))
-      .catch(err => console.error('Error al registrar SW:', err));
+      .then(reg => console.log('Service Worker activo:', reg))
+      .catch(err => console.error('Error al registrar Service Worker:', err));
   }
 
-  // DETECCIÓN DE CONEXIÓN EN TIEMPO REAL
+  // Monitor de Estado de Red
   function actualizarEstadoRed() {
     if (navigator.onLine) {
-      statusDot.classList.remove('offline');
-      statusText.textContent = 'En línea';
+      if (statusDot) statusDot.classList.remove('offline');
+      if (statusText) statusText.textContent = 'En línea';
       sincronizarPendientes();
     } else {
-      statusDot.classList.add('offline');
-      statusText.textContent = 'Fuera de línea';
+      if (statusDot) statusDot.classList.add('offline');
+      if (statusText) statusText.textContent = 'Fuera de línea';
     }
   }
 
@@ -31,16 +31,20 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('offline', actualizarEstadoRed);
   actualizarEstadoRed();
 
-  // GUARDAR FORMULARIO
-  docForm.addEventListener('submit', (e) => {
+  // Envío del Formulario
+  docForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    // Mantener valores persistentes tras guardar
+    const responsableVal = document.getElementById('responsable').value;
+    const serieVal = document.getElementById('serie').value;
+    const cajaVal = document.getElementById('caja').value;
+
     const data = {
-      timestamp: new Date().toISOString(),
-      responsable: document.getElementById('responsable').value,
-      serie: document.getElementById('serie').value,
+      responsable: responsableVal,
+      serie: serieVal,
       subserie: document.getElementById('subserie').value,
-      caja: document.getElementById('caja').value,
+      caja: cajaVal,
       expediente: document.getElementById('expediente').value,
       descripcion: document.getElementById('descripcion').value,
       numeroDocumento: document.getElementById('numeroDocumento').value,
@@ -49,36 +53,46 @@ document.addEventListener('DOMContentLoaded', () => {
       fojas: document.getElementById('fojas').value,
       tomos: document.getElementById('tomos').value,
       destinoFinal: document.getElementById('destinoFinal').value,
-      original: document.getElementById('original').checked ? 'SÍ' : 'NO',
-      copia: document.getElementById('copia').checked ? 'SÍ' : 'NO',
-      cd: document.getElementById('cd').checked ? 'SÍ' : 'NO',
+      original: document.getElementById('original').checked ? 'X' : '',
+      copia: document.getElementById('copia').checked ? 'X' : '',
+      cd: document.getElementById('cd').checked ? 'X' : '',
       bloque: document.getElementById('bloque').value,
       estanteria: document.getElementById('estanteria').value,
       cajaUbicacion: document.getElementById('cajaUbicacion').value
     };
 
     if (navigator.onLine) {
-      enviarAServer(data);
+      await enviarAServer(data);
     } else {
       guardarLocalmente(data);
-      alert('Sin conexión a Internet. El registro se guardó localmente y se enviará al reconectar.');
+      alert('Sin conexión. Registro guardado localmente.');
     }
 
+    // Resetear manteniendo campos fijos
     docForm.reset();
+    document.getElementById('responsable').value = responsableVal;
+    document.getElementById('serie').value = serieVal;
+    document.getElementById('caja').value = cajaVal;
+    document.getElementById('expediente').focus();
   });
 
-  function enviarAServer(data) {
-    fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
-    .then(() => alert('¡Expediente guardado con éxito en la nube!'))
-    .catch(err => {
-      console.error('Error al enviar:', err);
+  // Envío a Google Sheets
+  async function enviarAServer(data) {
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(data)
+      });
+
+      alert('¡Expediente guardado correctamente en la hoja de cálculo!');
+    } catch (err) {
+      console.error('Error de red al enviar:', err);
       guardarLocalmente(data);
-    });
+      alert('No se pudo conectar con el servidor. Registro guardado localmente.');
+    }
   }
 
   function guardarLocalmente(data) {
@@ -90,18 +104,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function comprobarPendientes() {
     let cola = JSON.parse(localStorage.getItem('cola_mtop') || '[]');
-    if (cola.length > 0) {
-      pendingBanner.style.display = 'flex';
-    } else {
-      pendingBanner.style.display = 'none';
+    if (pendingBanner) {
+      pendingBanner.style.display = cola.length > 0 ? 'flex' : 'none';
     }
   }
 
-  function sincronizarPendientes() {
+  async function sincronizarPendientes() {
     let cola = JSON.parse(localStorage.getItem('cola_mtop') || '[]');
     if (cola.length === 0) return;
 
-    cola.forEach(item => enviarAServer(item));
+    for (const item of cola) {
+      await enviarAServer(item);
+    }
     localStorage.removeItem('cola_mtop');
     comprobarPendientes();
   }
