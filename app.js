@@ -30,9 +30,9 @@ function range(prefix, n) {
 
 document.addEventListener('DOMContentLoaded', () => {
   fillSelect('serie', SERIES);
-  fillSelect('bloque', range('B', 20));
-  fillSelect('estanteria', range('EST', 20));
-  fillSelect('cajaUbicacion', range('C', 20));
+  fillSelect('bloque', range('B', 80));
+  fillSelect('estanteria', range('EST', 80));
+  fillSelect('cajaUbicacion', range('C', 80));
 
   document.getElementById('digitador').value = localStorage.getItem(DIGITADOR_KEY) || '';
 
