@@ -6,6 +6,8 @@ const TOKEN = 'mtop2026'; // debe ser igual al TOKEN en Code.gs
 
 const QUEUE_KEY = 'doc_mtop_queue';
 const DIGITADOR_KEY = 'doc_mtop_digitador';
+const LAST_ERROR_KEY = 'doc_mtop_last_error';
+const APP_VERSION = 'v5';
 
 // ---- Listas de opciones ----
 const SERIES = [
@@ -69,12 +71,46 @@ function updatePendingBadge() {
   const q = getQueue();
   const badge = document.getElementById('pendingBadge');
   if (q.length > 0) {
-    badge.textContent = `${q.length} pendiente${q.length > 1 ? 's' : ''} de enviar`;
+    badge.textContent = `${q.length} pendiente${q.length > 1 ? 's' : ''} · Ver detalle`;
     badge.classList.add('show');
   } else {
     badge.classList.remove('show');
   }
 }
+
+function showDiagnostico() {
+  const q = getQueue();
+  let lastError = null;
+  try { lastError = JSON.parse(localStorage.getItem(LAST_ERROR_KEY)); } catch {}
+
+  const lines = [
+    'DIAGNÓSTICO — Gestión Documental MTOP',
+    'Versión de la app en este celular: ' + APP_VERSION,
+    'Conexión ahora mismo: ' + (navigator.onLine ? 'SÍ hay internet' : 'NO hay internet'),
+    'Expedientes pendientes de enviar: ' + q.length,
+    ''
+  ];
+
+  if (lastError) {
+    lines.push('Último intento fallido:');
+    lines.push('Fecha: ' + lastError.when);
+    lines.push('Expediente: ' + lastError.expediente);
+    lines.push('Tipo: ' + lastError.type);
+    lines.push('Detalle: ' + lastError.detail);
+  } else {
+    lines.push('Aún no se ha registrado ningún intento fallido en este celular.');
+  }
+
+  lines.push('');
+  lines.push('Toma una captura de esta pantalla y envíasela al soporte.');
+
+  alert(lines.join('\n'));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const badge = document.getElementById('pendingBadge');
+  if (badge) badge.addEventListener('click', showDiagnostico);
+});
 
 function onSubmit(e) {
   e.preventDefault();
@@ -141,9 +177,22 @@ async function trySync() {
       if (data.ok) {
         const idx = remaining.findIndex((r) => r._localId === record._localId);
         if (idx > -1) remaining.splice(idx, 1);
+      } else {
+        localStorage.setItem(LAST_ERROR_KEY, JSON.stringify({
+          when: new Date().toLocaleString(),
+          type: 'Servidor respondió con error',
+          detail: data.error || 'Sin detalle',
+          expediente: (record.serie || '') + ' / Caja ' + (record.caja || '')
+        }));
       }
     } catch (err) {
       // sin conexión real o falla de red: se detiene y reintenta luego
+      localStorage.setItem(LAST_ERROR_KEY, JSON.stringify({
+        when: new Date().toLocaleString(),
+        type: 'No se pudo contactar al servidor',
+        detail: String(err && err.message || err),
+        expediente: (record.serie || '') + ' / Caja ' + (record.caja || '')
+      }));
       break;
     }
   }
